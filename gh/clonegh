@@ -1,10 +1,13 @@
 #!/bin/bash
 
 display_usage() {
-    echo 'Usage: clonegh [-m] <userid/orgid> <repoid>'
+    echo 'Usage: clonegh [-m] <id> <repoid>'
     echo 'with:'
-    echo '  - userid/orgid: the user or organization'
+    echo '  - id:     the user or organization'
     echo '  - repoid: the repository name'
+    echo
+    echo 'options:'
+    echo '  - m:      will clone in mirror mode if present'
 }
 
 check_repo() {
