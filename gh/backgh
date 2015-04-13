@@ -1,0 +1,73 @@
+#!/bin/bash
+
+DIR=`dirname $0`
+
+display_usage() {
+    echo 'Usage: backgh [-u <user> -p <password>] user|org <id>'
+    echo 'with:'
+    echo '  - id:       user name (if "user" is used)'
+    echo '              or organization name (with "org")'
+    echo
+    echo 'options:'
+    echo '  - user:     authenticate with the given user id'
+    echo '  - password: must be provided if the "user" option is present'
+}
+
+args=`getopt u:p: $*`
+
+if [ $? != 0 ]
+then
+    display_usage
+    exit 2
+fi
+
+auth_user=0
+auth_password=0
+
+set -- $args
+for i
+do
+    #echo "Looking at arg $i"
+    case "$i"
+    in
+        -u)
+            auth_user="$2"; shift;
+            shift;;
+        -p) 
+            auth_password="$2"; shift;
+            shift;;
+        --)
+            shift; break;;
+    esac
+done
+
+if [ "$auth_password" == "0" -a "$auth_user" != "0" ]
+then
+    echo "You need to provide a password for the user $auth_user"
+    display_usage
+    exit 2
+fi
+
+if [ $# != 2 ]
+then
+    display_usage
+    exit 2
+fi
+
+id_type=$1
+id_value=$2
+
+if [ "$id_type" != "user" -a "$id_type" != "org" ]
+then
+    echo "Use 'user' or 'org' as first argument!"
+    display_usage
+    exit 2
+fi
+
+repo_list=`${DIR}/listgh $id_type $id_value`
+
+for i in $repo_list
+do
+    $DIR/clonegh $id_value $i
+done
+
