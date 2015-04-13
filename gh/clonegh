@@ -1,7 +1,10 @@
 #!/bin/bash
 
 display_usage() {
-    echo 'Usage: clonegh [-m] userid repoid'
+    echo 'Usage: clonegh [-m] <userid/orgid> <repoid>'
+    echo 'with:'
+    echo '  - userid/orgid: the user or organization'
+    echo '  - repoid: the repository name'
 }
 
 check_repo() {
