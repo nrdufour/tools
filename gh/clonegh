@@ -1,0 +1,62 @@
+#!/bin/bash
+
+display_usage() {
+    echo 'Usage: clonegh [-m] userid repoid'
+}
+
+check_repo() {
+    curl -sL -w "%{http_code}" https://github.com/$1/$2 -o /dev/null
+}
+
+args=`getopt m $*`
+
+if [ $? != 0 ]
+then
+    display_usage
+    exit 2
+fi
+
+mirrored=0
+
+set -- $args
+for i
+do
+    #echo "Looking at arg $i"
+    case "$i"
+    in
+        -m)
+            mirrored=1;
+            shift;;
+        --)
+            shift; break;;
+    esac
+done
+
+#echo "mirrored=$mirrored"
+#echo "first: $1"
+
+if [ $# != 2 ]
+then
+    display_usage
+    exit 2
+fi
+
+userid=$1
+repoid=$2
+
+check=`check_repo $userid $repoid`
+if [ "$check" != "200" ]
+then
+    echo "The repository $userid/$repoid doesn't exist!"
+    exit 2
+fi
+
+mirror_option=""
+if [ "$mirrored" == "1" ]
+then
+    mirror_option="--mirror"
+fi
+echo "Backing up repo: $userid/$repoid"
+git clone -q ${mirror_option} https://github.com/${userid}/${repoid}.git 
+echo "Done"
+
