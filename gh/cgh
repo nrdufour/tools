@@ -1,0 +1,183 @@
+#!/bin/bash
+
+#
+# CLI Github
+#
+
+###############################################################################
+
+execute_list() {
+    if [ $# != 2 ]
+    then
+        display_usage_list
+        exit 2
+    fi
+
+    id_type=$1
+    id_value=$2
+
+    if [ "$id_type" != "user" -a "$id_type" != "org" ]
+    then
+        echo "Use 'user' or 'org' as first argument!"
+        display_usage_list
+        exit 2
+    fi
+
+    curl -s https://api.github.com/${id_type}s/${id_value}/repos | grep 'full_name' | cut -d/ -f2 | cut -d\" -f1
+}
+
+display_usage_list() {
+    echo 'Usage: cgh list user|org <id>'
+    echo
+    echo 'Options:'
+    echo '  -h    Print this help'
+}
+
+###############################################################################
+
+execute_clone() {
+    args=`getopt m $*`
+
+    if [ $? != 0 ]
+    then
+        display_usage_clone
+        exit 2
+    fi
+
+    mirrored=0
+
+    set -- $args
+    for i
+    do
+        case "$i" in
+            -m)
+                mirrored=1; shift;;
+            --)
+                shift; break;;
+        esac
+    done
+
+    if [ $# != 2 ]
+    then
+        display_usage_clone
+        exit 2
+    fi
+
+    userid=$1
+    repoid=$2
+
+    check=`check_repo $userid $repoid`
+    if [ "$check" != "200" ]
+    then
+        echo "The repository $userid/$repoid doesn't exist!"
+        exit 2
+    fi
+
+    mirror_option=""
+    if [ "$mirrored" == "1" ]
+    then
+        mirror_option="--mirror"
+    fi
+    echo "Backing up repo: $userid/$repoid"
+    git clone -q ${mirror_option} https://github.com/${userid}/${repoid}.git
+    echo "Done"
+}
+
+check_repo() {
+    curl -sL -w "%{http_code}" https://github.com/$1/$2 -o /dev/null
+}
+
+display_usage_clone() {
+    echo 'Usage: cgh clone [-m] <id> <repoid>'
+    echo 'with:'
+    echo '  id       the user or organization'
+    echo '  repoid   the repository name'
+    echo
+    echo 'Options:'
+    echo '  -m       will clone in mirror mode if present'
+    echo '  -h       print this help'
+}
+
+###############################################################################
+
+execute_backup() {
+    if [ $# != 2 ]
+    then
+        display_usage_backup
+        exit 2
+    fi
+
+    id_type=$1
+    id_value=$2
+
+    if [ "$id_type" != "user" -a "$id_type" != "org" ]
+    then
+        echo "Use 'user' or 'org' as first argument!"
+        display_usage_backup
+        exit 2
+    fi
+
+    repo_list=`execute_list $id_type $id_value`
+
+    for i in $repo_list
+    do
+        execute_clone $id_value $i
+    done
+}
+
+display_usage_backup() {
+    echo 'Usage: cgh backup user|org <id>'
+    echo
+    echo 'Options:'
+    echo '  -h       print this help'
+}
+
+###############################################################################
+
+display_version() {
+    echo 'cgh 0.0.1'
+}
+
+display_main_usage() {
+    echo 'Usage: cgh <command> [<args>]'
+    echo
+    echo '    -v, --version    Print the version and exit.'
+    echo '    -h, --help       Print this help.'
+    echo
+    echo 'Common commands:'
+    echo '    list       list github repositories'
+    echo '    clone      clone a github repository'
+    echo '    backup     clone a set of repositories'
+    echo
+    echo 'For help on any individual command run `cgh COMMAND -h`'
+    echo
+}
+
+if [ $# == 0 ]
+then
+    display_main_usage
+    exit 2
+fi
+
+command=$1
+shift
+
+case "$command" in
+    list|clone|backup)
+        first=$1
+        if [ "$first" == "-h" -o "$first" == "--help" ]
+        then
+            display_usage_${command}
+            exit 0
+        fi
+        execute_${command} $*;;
+    -v|--version)
+        display_version;;
+    -h|--help)
+        display_main_usage;;
+    *)
+        display_main_usage; exit 2;;
+esac
+
+#### THE END ####
+
